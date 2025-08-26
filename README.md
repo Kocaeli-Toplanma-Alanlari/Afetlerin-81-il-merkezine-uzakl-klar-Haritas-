@@ -1,0 +1,1 @@
+# Afetlerin-81-il-merkezine-uzakl-klar-Haritas-
