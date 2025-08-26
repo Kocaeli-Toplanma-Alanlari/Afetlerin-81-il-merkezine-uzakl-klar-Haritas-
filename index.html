@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>9.2</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Türkiye Acil Durum Haritası</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+  <style>
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    #map {
+      position: absolute;
+      top: 50px; /* panel yüksekliği kadar boşluk */
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: calc(100% - 50px);
+      width: 100%;
+      transition: top 0.3s ease;
+    }
+    #panel {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #f0f0f0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      z-index: 1000;
+      font-size: 14px;
+      user-select: none;
+    }
+    #panel-header {
+      height: 50px;
+      line-height: 50px;
+      padding: 0 15px;
+      cursor: pointer;
+      font-weight: bold;
+      background-color: #0077b6;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #panel-content {
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 10px 15px;
+      display: none; /* başlangıçta kapalı */
+      background: #f0f0f0;
+    }
+    button {
+      margin: 3px 5px 3px 0;
+      padding: 6px 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    button.route-btn {
+      background-color: #0077b6;
+      color: white;
+    }
+    button.route-btn:hover:not(:disabled) {
+      background-color: #005f86;
+    }
+    button.google-maps-btn {
+      background-color: #db4437;
+      color: white;
+    }
+    button.google-maps-btn:hover:not(:disabled) {
+      background-color: #a33224;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    #nearest-cities ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+    }
+    #nearest-cities li {
+      margin-bottom: 8px;
+    }
+    /* Açılır/kapanır ok simgesi */
+    #toggle-icon {
+      transition: transform 0.3s ease;
+    }
+    #panel.open #toggle-icon {
+      transform: rotate(180deg);
+    }
+    select, label {
+      font-size: 1em;
+      margin-right: 10px;
+    }
+    #panel-content > div {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <div id="panel-header" aria-expanded="false" role="button" tabindex="0">
+      Türkiye Acil Durum Haritası
+      <span id="toggle-icon">▼</span>
+    </div>
+    <div id="panel-content" aria-hidden="true">
+      <div>
+        <label for="emergency-location">Acil Durum Yeri:</label>
+        <select id="emergency-location" aria-label="Şehir Seçin">
+          <option value="" disabled selected>Şehir Seçin</option>
+          <option value="adana" data-lat="36.98542" data-lng="35.32502">01 Adana</option>
+          <option value="adiyaman" data-lat="37.76299" data-lng="38.27730">02 Adıyaman</option>
+          <option value="afyonkarahisar" data-lat="38.75622" data-lng="30.53785">03 Afyonkarahisar</option>
+          <option value="agri" data-lat="39.71899" data-lng="43.04766">04 Ağrı</option>
+          <option value="amasya" data-lat="40.65631" data-lng="35.83707">05 Amasya</option>
+          <option value="ankara" data-lat="39.94293" data-lng="32.86048">06 Ankara</option>
+          <option value="antalya" data-lat="36.89613" data-lng="30.71308">07 Antalya</option>
+          <option value="artvin" data-lat="41.18131" data-lng="41.82054">08 Artvin</option>
+          <option value="aydin" data-lat="37.83804" data-lng="27.84557">09 Aydın</option>
+          <option value="balikesir" data-lat="39.64488" data-lng="27.88536">10 Balıkesir</option>
+          <option value="bilecik" data-lat="40.14296" data-lng="29.97916">11 Bilecik</option>
+          <option value="bingol" data-lat="38.88472" data-lng="40.49639">12 Bingöl</option>
+          <option value="bitlis" data-lat="38.40066" data-lng="42.10897">13 Bitlis</option>
+          <option value="bolu" data-lat="40.73201" data-lng="31.60705">14 Bolu</option>
+          <option value="burdur" data-lat="37.71829" data-lng="30.28225">15 Burdur</option>
+          <option value="bursa" data-lat="40.18282" data-lng="29.06615">16 Bursa</option>
+          <option value="canakkale" data-lat="40.14678" data-lng="26.40822">17 Çanakkale</option>
+          <option value="cankiri" data-lat="40.60000" data-lng="33.61654">18 Çankırı</option>
+          <option value="corum" data-lat="40.54985" data-lng="34.95369">19 Çorum</option>
+          <option value="denizli" data-lat="37.78303" data-lng="29.09625">20 Denizli</option>
+          <option value="diyarbakir" data-lat="37.91441" data-lng="40.23063">21 Diyarbakır</option>
+          <option value="edirne" data-lat="41.67591" data-lng="26.55361">22 Edirne</option>
+          <option value="elazig" data-lat="38.68097" data-lng="39.22640">23 Elâzığ</option>
+          <option value="erzincan" data-lat="39.75000" data-lng="39.50000">24 Erzincan</option>
+          <option value="erzurum" data-lat="39.90432" data-lng="41.26789">25 Erzurum</option>
+          <option value="eskisehir" data-lat="39.78430" data-lng="30.51922">26 Eskişehir</option>
+          <option value="gaziantep" data-lat="37.06293" data-lng="37.37816">27 Gaziantep</option>
+          <option value="giresun" data-lat="40.91281" data-lng="38.38953">28 Giresun</option>
+          <option value="gumushane" data-lat="40.46028" data-lng="39.48139">29 Gümüşhane</option>
+          <option value="hakkari" data-lat="37.58333" data-lng="43.73333">30 Hakkâri</option>
+          <option value="hatay" data-lat="36.20210" data-lng="36.16210">31 Hatay</option>
+          <option value="isparta" data-lat="37.76360" data-lng="30.55890">32 Isparta</option>
+          <option value="mersin" data-lat="36.80050" data-lng="34.64040">33 Mersin</option>
+          <option value="istanbul" data-lat="41.00824" data-lng="28.97836">34 İstanbul</option>
+          <option value="izmir" data-lat="38.41010" data-lng="27.12970">35 İzmir</option>
+          <option value="kars" data-lat="40.60560" data-lng="43.10040">36 Kars</option>
+          <option value="kastamonu" data-lat="41.37230" data-lng="33.77190">37 Kastamonu</option>
+          <option value="kayseri" data-lat="38.72290" data-lng="35.48010">38 Kayseri</option>
+          <option value="kirklareli" data-lat="41.73780" data-lng="27.22850">39 Kırklareli</option>
+          <option value="kirsehir" data-lat="39.14800" data-lng="34.16400">40 Kırşehir</option>
+          <option value="kocaeli" data-lat="40.77320" data-lng="29.95070">41 Kocaeli</option>
+          <option value="konya" data-lat="37.87040" data-lng="32.51100">42 Konya</option>
+          <option value="kutahya" data-lat="39.42170" data-lng="29.98790">43 Kütahya</option>
+          <option value="malatya" data-lat="38.31430" data-lng="38.34750">44 Malatya</option>
+          <option value="manisa" data-lat="38.62220" data-lng="27.42970">45 Manisa</option>
+          <option value="kahramanmaras" data-lat="36.92830" data-lng="37.58940">46 Kahramanmaraş</option>
+          <option value="mardin" data-lat="37.31360" data-lng="40.75840">47 Mardin</option>
+          <option value="mugla" data-lat="37.21960" data-lng="28.36580">48 Muğla</option>
+          <option value="mus" data-lat="38.73340" data-lng="41.48780">49 Muş</option>
+          <option value="nevsehir" data-lat="38.62500" data-lng="34.71278">50 Nevşehir</option>
+          <option value="nigde" data-lat="37.96530" data-lng="34.68510">51 Niğde</option>
+          <option value="ordu" data-lat="40.98810" data-lng="37.87400">52 Ordu</option>
+          <option value="rize" data-lat="41.02240" data-lng="40.52140">53 Rize</option>
+          <option value="sakarya" data-lat="40.74890" data-lng="30.37930">54 Sakarya</option>
+          <option value="samsun" data-lat="41.28710" data-lng="36.32340">55 Samsun</option>
+          <option value="siirt" data-lat="37.92510" data-lng="41.94420">56 Siirt</option>
+          <option value="sinop" data-lat="42.02690" data-lng="35.16000">57 Sinop</option>
+          <option value="sivas" data-lat="39.75150" data-lng="37.01720">58 Sivas</option>
+          <option value="tekirdag" data-lat="40.97920" data-lng="27.51440">59 Tekirdağ</option>
+          <option value="tokat" data-lat="40.30630" data-lng="36.55590">60 Tokat</option>
+          <option value="trabzon" data-lat="41.00610" data-lng="39.71910">61 Trabzon</option>
+          <option value="tunceli" data-lat="39.10690" data-lng="39.54910">62 Tunceli</option>
+          <option value="sanliurfa" data-lat="37.15120" data-lng="38.79220">63 Şanlıurfa</option>
+          <option value="usak" data-lat="38.67160" data-lng="29.40560">64 Uşak</option>
+          <option value="van" data-lat="38.49700" data-lng="43.38160">65 Van</option>
+          <option value="yozgat" data-lat="39.82220" data-lng="34.80820">66 Yozgat</option>
+          <option value="zonguldak" data-lat="41.45420" data-lng="31.79800">67 Zonguldak</option>
+          <option value="aksaray" data-lat="38.36863" data-lng="34.02970">68 Aksaray</option>
+          <option value="bayburt" data-lat="40.22840" data-lng="40.25870">69 Bayburt</option>
+          <option value="karaman" data-lat="37.18140" data-lng="33.22190">70 Karaman</option>
+          <option value="kirikkale" data-lat="39.84170" data-lng="33.51600">71 Kırıkkale</option>
+          <option value="batman" data-lat="37.87830" data-lng="41.12350">72 Batman</option>
+          <option value="sirnak" data-lat="37.52280" data-lng="42.46080">73 Şırnak</option>
+          <option value="bartin" data-lat="41.63640" data-lng="32.33780">74 Bartın</option>
+          <option value="ardahan" data-lat="41.11060" data-lng="42.70250">75 Ardahan</option>
+          <option value="igdir" data-lat="39.91930" data-lng="44.04550">76 Iğdır</option>
+          <option value="yalova" data-lat="40.65600" data-lng="29.27120">77 Yalova</option>
+          <option value="karabuk" data-lat="41.19820" data-lng="32.62640">78 Karabük</option>
+          <option value="kilis" data-lat="36.71760" data-lng="37.11390">79 Kilis</option>
+          <option value="osmaniye" data-lat="36.24850" data-lng="37.07430">80 Osmaniye</option>
+          <option value="duzce" data-lat="40.83930" data-lng="31.16390">81 Düzce</option>
+        </select>
+      </div>
+      <div>
+        <button id="select-emergency-location">Acil Durum Konumu Seç</button>
+        <button id="clear-map">Haritayı Temizle</button>
+      </div>
+      <div id="nearest-cities"></div>
+    </div>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+  <script>
+    const panel = document.getElementById('panel');
+    const panelHeader = document.getElementById('panel-header');
+    const panelContent = document.getElementById('panel-content');
+    const toggleIcon = document.getElementById('toggle-icon');
+    const mapDiv = document.getElementById('map');
+
+    // Panel aç/kapa fonksiyonu
+    function togglePanel() {
+      const isOpen = panelContent.style.display === 'block';
+      if (isOpen) {
+        panelContent.style.display = 'none';
+        panel.setAttribute('aria-expanded', 'false');
+        panelContent.setAttribute('aria-hidden', 'true');
+        panel.classList.remove('open');
+        mapDiv.style.top = '50px';
+      } else {
+        panelContent.style.display = 'block';
+        panel.setAttribute('aria-expanded', 'true');
+        panelContent.setAttribute('aria-hidden', 'false');
+        panel.classList.add('open');
+        mapDiv.style.top = (50 + panelContent.offsetHeight) + 'px';
+      }
+    }
+
+    panelHeader.addEventListener('click', togglePanel);
+    panelHeader.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        togglePanel();
+      }
+    });
+
+    // Başlangıçta panel açık olsun
+    togglePanel();
+
+    const map = L.map('map').setView([39.0, 35.0], 6);
+
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const cities = {
+      "adana": { lat: 36.98542, lng: 35.32502 },
+      "adiyaman": { lat: 37.76299, lng: 38.27730 },
+      "afyonkarahisar": { lat: 38.75622, lng: 30.53785 },
+      "agri": { lat: 39.71899, lng: 43.04766 },
+      "amasya": { lat: 40.65631, lng: 35.83707 },
+      "ankara": { lat: 39.94293, lng: 32.86048 },
+      "antalya": { lat: 36.89613, lng: 30.71308 },
+      "artvin": { lat: 41.18131, lng: 41.82054 },
+      "aydin": { lat: 37.83804, lng: 27.84557 },
+      "balikesir": { lat: 39.64488, lng: 27.88536 },
+      "bilecik": { lat: 40.14296, lng: 29.97916 },
+      "bingol": { lat: 38.88472, lng: 40.49639 },
+      "bitlis": { lat: 38.40066, lng: 42.10897 },
+      "bolu": { lat: 40.73201, lng: 31.60705 },
+      "burdur": { lat: 37.71829, lng: 30.28225 },
+      "bursa": { lat: 40.18282, lng: 29.06615 },
+      "canakkale": { lat: 40.14678, lng: 26.40822 },
+      "cankiri": { lat: 40.60000, lng: 33.61654 },
+      "corum": { lat: 40.54985, lng: 34.95369 },
+      "denizli": { lat: 37.78303, lng: 29.09625 },
+      "diyarbakir": { lat: 37.91441, lng: 40.23063 },
+      "edirne": { lat: 41.67591, lng: 26.55361 },
+      "elazig": { lat: 38.68097, lng: 39.22640 },
+      "erzincan": { lat: 39.75000, lng: 39.50000 },
+      "erzurum": { lat: 39.90432, lng: 41.26789 },
+      "eskisehir": { lat: 39.78430, lng: 30.51922 },
+      "gaziantep": { lat: 37.06293, lng: 37.37816 },
+      "giresun": { lat: 40.91281, lng: 38.38953 },
+      "gumushane": { lat: 40.46028, lng: 39.48139 },
+      "hakkari": { lat: 37.58333, lng: 43.73333 },
+      "hatay": { lat: 36.20210, lng: 36.16210 },
+      "isparta": { lat: 37.76360, lng: 30.55890 },
+      "mersin": { lat: 36.80050, lng: 34.64040 },
+      "istanbul": { lat: 41.00824, lng: 28.97836 },
+      "izmir": { lat: 38.41010, lng: 27.12970 },
+      "kars": { lat: 40.60560, lng: 43.10040 },
+      "kastamonu": { lat: 41.37230, lng: 33.77190 },
+      "kayseri": { lat: 38.72290, lng: 35.48010 },
+      "kirklareli": { lat: 41.73780, lng: 27.22850 },
+      "kirsehir": { lat: 39.14800, lng: 34.16400 },
+      "kocaeli": { lat: 40.77320, lng: 29.95070 },
+      "konya": { lat: 37.87040, lng: 32.51100 },
+      "kutahya": { lat: 39.42170, lng: 29.98790 },
+      "malatya": { lat: 38.31430, lng: 38.34750 },
+      "manisa": { lat: 38.62220, lng: 27.42970 },
+      "kahramanmaras": { lat: 36.92830, lng: 37.58940 },
+      "mardin": { lat: 37.31360, lng: 40.75840 },
+      "mugla": { lat: 37.21960, lng: 28.36580 },
+      "mus": { lat: 38.73340, lng: 41.48780 },
+      "nevsehir": { lat: 38.62500, lng: 34.71278 },
+      "nigde": { lat: 37.96530, lng: 34.68510 },
+      "ordu": { lat: 40.98810, lng: 37.87400 },
+      "rize": { lat: 41.02240, lng: 40.52140 },
+      "sakarya": { lat: 40.74890, lng: 30.37930 },
+      "samsun": { lat: 41.28710, lng: 36.32340 },
+      "siirt": { lat: 37.92510, lng: 41.94420 },
+      "sinop": { lat: 42.02690, lng: 35.16000 },
+      "sivas": { lat: 39.75150, lng: 37.01720 },
+      "tekirdag": { lat: 40.97920, lng: 27.51440 },
+      "tokat": { lat: 40.30630, lng: 36.55590 },
+      "trabzon": { lat: 41.00610, lng: 39.71910 },
+      "tunceli": { lat: 39.10690, lng: 39.54910 },
+      "sanliurfa": { lat: 37.15120, lng: 38.79220 },
+      "usak": { lat: 38.67160, lng: 29.40560 },
+      "van": { lat: 38.49700, lng: 43.38160 },
+      "yozgat": { lat: 39.82220, lng: 34.80820 },
+      "zonguldak": { lat: 41.45420, lng: 31.79800 },
+      "aksaray": { lat: 38.36863, lng: 34.02970 },
+      "bayburt": { lat: 40.22840, lng: 40.25870 },
+      "karaman": { lat: 37.18140, lng: 33.22190 },
+      "kirikkale": { lat: 39.84170, lng: 33.51600 },
+      "batman": { lat: 37.87830, lng: 41.12350 },
+      "sirnak": { lat: 37.52280, lng: 42.46080 },
+      "bartin": { lat: 41.63640, lng: 32.33780 },
+      "ardahan": { lat: 41.11060, lng: 42.70250 },
+      "igdir": { lat: 39.91930, lng: 44.04550 },
+      "yalova": { lat: 40.65600, lng: 29.27120 },
+      "karabuk": { lat: 41.19820, lng: 32.62640 },
+      "kilis": { lat: 36.71760, lng: 37.11390 },
+      "osmaniye": { lat: 36.24850, lng: 37.07430 },
+      "duzce": { lat: 40.83930, lng: 31.16390 }
+    };
+
+    let routingControl;
+    let selectedPoint;
+
+    // Panel aç/kapa fonksiyonu
+    function togglePanel() {
+      const isOpen = panelContent.style.display === 'block';
+      if (isOpen) {
+        panelContent.style.display = 'none';
+        panel.setAttribute('aria-expanded', 'false');
+        panelContent.setAttribute('aria-hidden', 'true');
+        panel.classList.remove('open');
+        mapDiv.style.top = '50px';
+      } else {
+        panelContent.style.display = 'block';
+        panel.setAttribute('aria-expanded', 'true');
+        panelContent.setAttribute('aria-hidden', 'false');
+        panel.classList.add('open');
+        mapDiv.style.top = (50 + panelContent.offsetHeight) + 'px';
+      }
+    }
+
+    panelHeader.addEventListener('click', togglePanel);
+    panelHeader.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        togglePanel();
+      }
+    });
+
+    // Başlangıçta panel açık olsun
+    togglePanel();
+
+    // İl seçilince haritayı o merkeze zoomla
+    document.getElementById('emergency-location').addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      const lat = parseFloat(selectedOption.getAttribute('data-lat'));
+      const lng = parseFloat(selectedOption.getAttribute('data-lng'));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        map.setView([lat, lng], 9);
+      }
+    });
+
+    document.getElementById("select-emergency-location").addEventListener("click", () => {
+      map.once('click', function onMapClick(e) {
+        if (selectedPoint) {
+          map.removeLayer(selectedPoint);
+        }
+        selectedPoint = L.marker(e.latlng).addTo(map);
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        calculateDistances(lat, lng);
+      });
+    });
+
+    function calculateDistances(lat, lng) {
+      const distances = Object.keys(cities).map(city => {
+        const cityLat = cities[city].lat;
+        const cityLng = cities[city].lng;
+        const distance = getDistance(lat, lng, cityLat, cityLng);
+        return { city, distance };
+      });
+
+      distances.sort((a, b) => a.distance - b.distance);
+      const nearestCities = distances.slice(0, 5);
+      displayNearestCities(nearestCities);
+
+      // Rota çiz (en yakın il için)
+      drawRoute(lat, lng, cities[nearestCities[0].city].lat, cities[nearestCities[0].city].lng);
+    }
+
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371; // Dünya yarıçapı km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function displayNearestCities(nearestCities) {
+      const nearestCitiesDiv = document.getElementById('nearest-cities');
+      nearestCitiesDiv.innerHTML = '<h3>En Yakın 5 İl:</h3><ul>';
+      nearestCities.forEach(({ city, distance }) => {
+        nearestCitiesDiv.innerHTML += 
+          `<li>
+            ${city.charAt(0).toUpperCase() + city.slice(1)} - ${distance.toFixed(2)} km
+            <button class="route-btn" data-lat="${cities[city].lat}" data-lng="${cities[city].lng}" title="Haritada Rota Çiz">Rota</button>
+            <button class="google-maps-btn" data-lat="${cities[city].lat}" data-lng="${cities[city].lng}" title="Google Haritalar'da Aç">Google Haritalar</button>
+          </li>`;
+      });
+      nearestCitiesDiv.innerHTML += '</ul>';
+
+      // Butonlara olay dinleyici ekle
+      document.querySelectorAll('.route-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          if (!selectedPoint) {
+            alert('Lütfen önce acil durum konumu seçin.');
+            return;
+          }
+          const lat = parseFloat(button.getAttribute('data-lat'));
+          const lng = parseFloat(button.getAttribute('data-lng'));
+          drawRoute(selectedPoint.getLatLng().lat, selectedPoint.getLatLng().lng, lat, lng);
+        });
+      });
+
+      document.querySelectorAll('.google-maps-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          if (!selectedPoint) {
+            alert('Lütfen önce acil durum konumu seçin.');
+            return;
+          }
+          const destLat = button.getAttribute('data-lat');
+          const destLng = button.getAttribute('data-lng');
+          const startLat = selectedPoint.getLatLng().lat;
+          const startLng = selectedPoint.getLatLng().lng;
+
+          const url = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLng}&destination=${destLat},${destLng}&travelmode=driving`;
+          window.open(url, '_blank');
+        });
+      });
+    }
+
+    function drawRoute(startLat, startLng, endLat, endLng) {
+      if (routingControl) {
+        map.removeControl(routingControl);
+      }
+      routingControl = L.Routing.control({
+        waypoints: [
+          L.latLng(startLat, startLng),
+          L.latLng(endLat, endLng)
+        ],
+        routeWhileDragging: true,
+        createMarker: () => null,
+      }).addTo(map);
+    }
+
+    document.getElementById("clear-map").addEventListener("click", () => {
+      if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+      }
+      if (selectedPoint) {
+        map.removeLayer(selectedPoint);
+        selectedPoint = null;
+      }
+      document.getElementById('nearest-cities').innerHTML = '';
+    });
+  </script>
+  <button id="backButton" onclick="window.location.href='index.html'" aria-label="Ana Sayfaya Dön" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #0077b6;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0,119,182,0.5);
+  transition: background-color 0.3s ease;
+  z-index: 9999;
+">
+  Ana Sayfaya Dön
+</button>
+</body>
+</html>
+<!-- partial -->
+  
+</body>
+</html>
